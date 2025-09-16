@@ -1,4 +1,12 @@
 {.push raises: [].}
+const dynLibName =
+  case system.hostOS:
+    of "windows":
+      "DOtherSide.dll"
+    of "macosx":
+      "libDOtherSide.dylib"
+    else:
+      "libDOtherSide.so.0.(9|8)"
 
 import tables
 
@@ -24,6 +32,11 @@ type
   DosQAbstractTableModel = distinct pointer
   DosQAbstractListModel = distinct pointer
   DosQMetaObjectConnection = distinct pointer
+  DosQSettings = distinct pointer
+  DosStatusEvent = DosQObject
+  DosStatusOSNotification = DosQObject
+  DosStatusKeychainManager = DosQObject
+  DosQTimer = DosQObject
 
   DosParameterDefinition = object
     name: cstring
@@ -61,6 +74,7 @@ type
 
   DosCreateCallback = proc(id: cint, wrapper: DosQObjectWrapper, nimQObject: var NimQObject, dosQObject: var DosQObject) {.cdecl.}
   DosDeleteCallback = proc(id: cint, nimQObject: NimQObject) {.cdecl.}
+  DosMessageHandler = proc(messageType: cint, message: cstring, category: cstring, file: cstring, function: cstring, lint: cint) {.cdecl.}
 
   DosQmlRegisterType = object
     major: cint
@@ -128,6 +142,7 @@ proc dos_qcoreapplication_application_dir_path(): string =
 
 # # QApplication
 var qapp: gen_qapplication.Qapplication
+var qGuiApp: gen_qguiapplication.QGuiApplication
 
 proc dos_qapplication_create() =
   qapp = gen_qapplication.QApplication.create()
@@ -144,6 +159,8 @@ proc dos_qapplication_delete() =
 # QGuiApplication
 proc dos_qguiapplication_create() =
   debugEcho "dos_qguiapplication_create() "
+  qGuiApp = gen_qguiapplication.QGuiApplication.create()
+  qApp = cast [gen_qapplication.Qapplication](qGuiApp)
 
 proc dos_qguiapplication_exec() =
   discard gen_qguiapplication.QGuiApplication.exec()
@@ -153,6 +170,7 @@ proc dos_qguiapplication_quit() =
 
 proc dos_qguiapplication_delete() =
   debugEcho "dos_qguiapplication_delete() "
+  delete(move(qGuiApp))
 
 # QQmlContext
 proc dos_qqmlcontext_setcontextproperty(
@@ -503,6 +521,17 @@ proc dos_qabstractitemmodel_beginRemoveColumns(model: DosQAbstractItemModel,
 proc dos_qabstractitemmodel_endRemoveColumns(model: DosQAbstractItemModel) =
   model.endRemoveColumns()
 
+proc dos_qabstractitemmodel_beginMoveRows(model: DosQAbstractItemModel,
+                                         sourceParent: DosQModelIndex,
+                                         sourceFirst: cint,
+                                         sourceLast: cint,
+                                         destinationParent: DosQModelIndex,
+                                         destinationChild: cint): bool =
+  model.beginMoveRows(sourceParent, sourceFirst, sourceLast, destinationParent, destinationChild)
+
+proc dos_qabstractitemmodel_endMoveRows(model: DosQAbstractItemModel) =
+  model.endMoveRows()
+
 proc dos_qabstractitemmodel_beginResetModel(model: DosQAbstractItemModel) =
   model.beginResetModel()
 
@@ -613,4 +642,117 @@ proc dos_qabstracttablemodel_parent(modelPtr: DosQAbstractTableModel, index: Dos
 proc dos_qabstracttablemodel_index(modelPtr: DosQAbstractTableModel, row: cint, column: cint, parent: DosQModelIndex): DosQModelIndex =
   QAbstractTableModel(modelPtr).QAbstractTableModelindex(row, column, parent).take()
 
+proc dos_qsettings_create(fileName: cstring, format: int): DosQSettings =
+  gen_qsettings.QSettings.create().take()
+
+proc dos_qsettings_value(vptr: DosQSettings, key: cstring, 
+  defaultValue: DosQVariant): DosQVariant =
+  vptr.value(toOpenArray(key, 0, key.len), defaultValue).take()
+
+proc dos_qsettings_set_value(vptr: DosQSettings, key: cstring, 
+    value: DosQVariant) =
+  vptr.setValue(toOpenArray(key, 0, key.len), value)
+
+proc dos_qsettings_remove(vptr: DosQSettings, key: cstring) =
+  vptr.remove(toOpenArray(key, 0, key.len))
+
+proc dos_qsettings_delete(vptr: DosQSettings) =
+  discard
+
+proc dos_qsettings_begin_group(vptr: DosQSettings, group: cstring) =
+  vptr.beginGroup(toOpenArray(group, 0, group.len))
+
+proc dos_qsettings_end_group(vptr: DosQSettings) =
+  vptr.endGroup()
+
+
+# DosStatusEvent
+proc dos_event_create_urlSchemeEvent(): DosStatusEvent {.cdecl, dynlib: dynLibName, importc.}
+proc dos_event_delete(vptr: DosStatusEvent) {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_qguiapplication_installEventFilter(engine: DosStatusEvent) {.cdecl, dynlib: dynLibName, importc.}
+
+# DosStatusOSNotification
+proc dos_osnotification_create(): DosStatusOSNotification 
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_osnotification_show_notification(vptr: DosStatusOSNotification,
+  title: cstring, messsage: cstring, identifier: cstring) 
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_osnotification_show_badge_notification(vptr: DosStatusOSNotification, notificationsCount: int) 
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_osnotification_delete(vptr: DosStatusOSNotification) 
+  {.cdecl, dynlib: dynLibName, importc.}
+
+# DosStatusKeychainManager
+proc dos_keychainmanager_create(service: cstring, authenticationReason: cstring): 
+  DosStatusKeychainManager
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_keychainmanager_read_data_sync(vptr: DosStatusKeychainManager,
+  key: cstring): string {.cdecl, dynlib: dynLibName, importc.}
+proc dos_keychainmanager_read_data_async(vptr: DosStatusKeychainManager,
+  key: cstring) {.cdecl, dynlib: dynLibName, importc.}
+proc dos_keychainmanager_store_data_async(vptr: DosStatusKeychainManager,
+  key: cstring, data: cstring) {.cdecl, dynlib: dynLibName, importc.}
+proc dos_keychainmanager_delete_data_async(vptr: DosStatusKeychainManager,
+  key: cstring) {.cdecl, dynlib: dynLibName, importc.}
+proc dos_keychainmanager_delete(vptr: DosStatusKeychainManager) 
+  {.cdecl, dynlib: dynLibName, importc.}
+
+
+# SingleInstance
+proc dos_singleinstance_create(uniqueName: cstring, eventStr: cstring): DosQObject {.cdecl, dynlib: dynLibName, importc.}
+proc dos_singleinstance_isfirst(vptr: DosQObject): bool {.cdecl, dynlib: dynLibName, importc.}
+proc dos_singleinstance_delete(vptr: DosQObject) {.cdecl, dynlib: dynLibName, importc.}
+
+
+# status-go signal handler
+proc dos_signal(vptr: pointer, signal: cstring, slot: cstring) {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_save_byte_image_to_file(imagePath: cstring,tmpDirPath: cstring): cstring {.cdecl, dynlib: dynLibName, importc.}
+proc dos_plain_text(htmlString: cstring): cstring {.cdecl, dynlib: dynLibName, importc.}
+proc dos_escape_html(input: cstring): cstring {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qurl_fromUserInput(input: cstring): cstring {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qurl_host(host: cstring): cstring {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qurl_replaceHostAndAddPath(url: cstring, newScheme: cstring, newHost: cstring, pathPrefix: cstring): cstring {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_to_local_file(fileUrl: cstring): cstring
+  {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_from_local_file(filePath: cstring): cstring
+  {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_qguiapplication_load_translation(engine: DosQQmlApplicationEngine, content: cstring, shouldRetranslate: bool) {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_qtwebview_initialize() {.cdecl, dynlib: dynLibName, importc.}
+
+# QTimer
+proc dos_qtimer_create(): DosQTimer
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_delete(vptr: DosQTimer)
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_set_interval(vptr: DosQTimer, interval: int)
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_interval(vptr: DosQTimer): int
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_start(vptr: DosQTimer)
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_stop(vptr: DosQTimer)
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_set_single_shot(vptr: DosQTimer, singleShot: bool)
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_is_single_shot(vptr: DosQTimer): bool
+  {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qtimer_is_active(vptr: DosQTimer): bool
+  {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_app_is_active(engine: DosQQmlApplicationEngine): bool {.cdecl, dynlib: dynLibName, importc.}
+proc dos_app_make_it_active(engine: DosQQmlApplicationEngine) {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_add_self_signed_certificate(content: cstring) {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qguiapplication_try_enable_threaded_renderer() {.cdecl, dynlib: dynLibName, importc.}
+proc dos_qguiapplication_icon(filename: cstring) {.cdecl, dynlib: dynLibName, importc.}
+# Common
+proc dos_installMessageHandler(handler: DosMessageHandler) {.cdecl, dynlib: dynLibName, importc.}
+
+proc dos_qguiapplication_application_dir_path(): cstring {.cdecl, dynlib: dynLibName, importc.}
 {.pop.}

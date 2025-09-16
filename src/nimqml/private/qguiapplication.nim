@@ -18,3 +18,6 @@ proc exec*(self: QGuiApplication) =
 proc quit*(self: QGuiApplication) =
   ## Quit the Qt event loop
   dos_qguiapplication_quit()
+
+proc initializeWebView*() =
+  dos_qtwebview_initialize()

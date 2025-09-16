@@ -1,8 +1,16 @@
 type
   QObject* = ref object of RootObj ## \
     ## A QObject
-    vptr: DosQObject
+    vptr*: DosQObject
     owner: bool
+
+  StatusEvent* = ref object of QObject
+
+  StatusOSNotification* = ref object of QObject 
+
+  StatusKeychainManager* = ref object of QObject
+
+  SingleInstance* = ref object of QObject
 
   QAbstractItemModel* = ref object of QObject ## \
     ## A QAbstractItemModel
@@ -43,6 +51,9 @@ type
 
   QResource* = ref object of RootObj ## \
     # A QResource
+  QSettings* = ref object of RootObj ## \
+    # A QSettings
+    vptr: DosQSettings
 
   QtItemFlag*{.pure, size: sizeof(cint).} = enum ## \
     ## Item flags
@@ -135,5 +146,6 @@ type
     lock: Lock
     lambdas: Table[int, LambdaInvokerProc]
 
+  QTimer* = ref object of QObject
 const
   UserRole* = 0x100

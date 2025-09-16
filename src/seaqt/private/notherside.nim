@@ -6,7 +6,7 @@ import
   seaqt/[
     qabstractitemdelegate, qabstractitemmodel, qapplication, qcoreapplication,
     qguiapplication, qmetatype, qmetaobject, qobject, qmetamethod, qresource, qurl,
-    qvariant, qqmlapplicationengine, qqmlcomponent, qqmlcontext, qquickview,
+    qvariant, qqmlapplicationengine, qqmlcomponent, qqmlcontext, qquickview, qsettings
   ],
   ./metaobjectgen
 
@@ -128,6 +128,14 @@ template take*(v: gen_qabstractitemmodel_types.QModelIndex): DosQModelIndex =
 proc borrow*(v: gen_qabstractitemmodel_types.QModelIndex): DosQModelIndex =
   DosQModelIndex(v.h)
 
+template take*(v: gen_qsettings_types.QSettings): DosQSettings =
+  var vv = v
+  vv.owned = false
+  DosQSettings(vv.h)
+
+proc borrow*(v: gen_qsettings_types.QSettings): DosQSettings =
+  DosQSettings(v.h)
+
 converter toQModelIndex*(v: DosQModelIndex): gen_qabstractitemmodel_types.QModelIndex =
   gen_qabstractitemmodel_types.QModelIndex(h: pointer(v))
 
@@ -163,6 +171,9 @@ proc borrow*(v: gen_qvariant_types.QVariant): DosQVariant =
 
 converter toQVariant*(v: DosQVariant): gen_qvariant.QVariant =
   gen_qvariant_types.QVariant(h: pointer(v))
+
+converter toQSettings*(v: DosQSettings): gen_qsettings_types.QSettings =
+  gen_qsettings_types.QSettings(h: pointer(v))
 
 from system/ansi_c import c_calloc, c_free
 

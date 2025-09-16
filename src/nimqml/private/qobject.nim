@@ -90,6 +90,9 @@ macro connect*(typ: type QObject, sender: typed, senderFuncUntyped: typed, recei
   else:
     assert(false)
 
+proc signalConnect*(sender: QObject, signal: string, receiver: QObject, slot: string, signalType: int = 0) =
+  discard dos_qobject_connect_static(sender.vptr, ("2" & signal).cstring, receiver.vptr, ("1" & slot).cstring, signalType.cint)
+
 proc disconnect*(typ: type QObject, sender: QObject, senderFunc: string, receiver: QObject, receiverFunc: string) =
   ## Disconnect a qobject signal/slot connection
   dos_qobject_disconnect_static(sender.vptr, senderFunc.cstring, receiver.vptr, receiverFunc.cstring)

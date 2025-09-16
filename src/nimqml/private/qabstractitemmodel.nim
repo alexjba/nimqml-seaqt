@@ -222,7 +222,7 @@ proc endResetModel*(self: QAbstractItemModel) =
 proc dataChanged*(self: QAbstractItemModel,
                  topLeft: QModelIndex,
                  bottomRight: QModelIndex,
-                 roles: openArray[int]) =
+                 roles: openArray[int] = []) =
   ## Notify the view that the model data changed
   debugMsg("QAbstractItemModel", "dataChanged")
   var copy: seq[cint]
@@ -230,3 +230,13 @@ proc dataChanged*(self: QAbstractItemModel,
     copy.add(i.cint)
   dos_qabstractitemmodel_dataChanged(self.vptr.DosQAbstractItemModel, topLeft.vptr,
                                      bottomRight.vptr, copy[0].addr, copy.len.cint)
+
+proc beginMoveRows*(self: QAbstractItemModel, sourceParentIndex: QModelIndex, sourceFirst: int, sourceLast: int, destParentIndex: QModelIndex, destinationChild: int) =
+  ## Notify the view that the model is about to move rows
+  debugMsg("QAbstractItemModel", "beginMoveRows")
+  discard dos_qabstractitemmodel_beginMoveRows(self.vptr.DosQAbstractItemModel, sourceParentIndex.vptr, sourceFirst.cint, sourceLast.cint, destParentIndex.vptr, destinationChild.cint)
+
+proc endMoveRows*(self: QAbstractItemModel) =
+  ## Notify the view that the rows have been moved
+  debugMsg("QAbstractItemModel", "endMoveRows")
+  dos_qabstractitemmodel_endMoveRows(self.vptr.DosQAbstractItemModel)
